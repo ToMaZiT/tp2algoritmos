@@ -227,80 +227,374 @@ def numeroSecreto():
     input("\nPresione Enter para volver al menú principal")
 #no utiliza variables locales
 def blackjack():
-    limpiar_pantalla()
-    print("\n          JUEGO EN CONSTRUCCIÓN. VOLVER LUEGO.")
-    input("\nPresione Enter para volver al menú principal")
+    global victorias_bj
 
+    limpiar_pantalla()
+
+    indice = pedirNombre()
+    if indice == -1:
+        input("\nPresione Enter para volver al menú principal")
+        return
+    nombre = nombres_jugadores[indice]
+
+    jugar_otra = True
+
+    while jugar_otra:
+
+        # -- MAZO --
+        palos  = ["♠", "♥", "♦", "♣"]
+        valores = ["2","3","4","5","6","7","8","9","10","J","Q","K","A"]
+
+        mazo = [None] * 52
+        i = 0
+        p = 0
+        while p < 4:
+            v = 0
+            while v < 13:
+                mazo[i] = valores[v] + palos[p]
+                i += 1
+                v += 1
+            p += 1
+
+        random.shuffle(mazo)
+        carta_actual = 0  # índice de la próxima carta a repartir
+
+        # -- MANO JUGADOR Y BANCA --
+        mano_jugador = [None] * 52
+        mano_banca   = [None] * 52
+        cant_jugador = 0
+        cant_banca   = 0
+
+        # repartir 2 cartas a cada uno
+        mano_jugador[0] = mazo[carta_actual]; carta_actual += 1
+        mano_banca[0]   = mazo[carta_actual]; carta_actual += 1
+        mano_jugador[1] = mazo[carta_actual]; carta_actual += 1
+        mano_banca[1]   = mazo[carta_actual]; carta_actual += 1
+        cant_jugador = 2
+        cant_banca   = 2
+
+        limpiar_pantalla()
+
+        # -- FUNCIÓN INTERNA: calcular puntaje --
+        def calcularPuntaje(mano, cantidad):
+            total = 0
+            ases  = 0
+            i = 0
+            while i < cantidad:
+                carta = mano[i][:-1]  # saca el palo (último caracter)
+                if carta in ["J", "Q", "K"]:
+                    total += 10
+                elif carta == "A":
+                    total += 11
+                    ases  += 1
+                else:
+                    total += int(carta)
+                i += 1
+            while total > 21 and ases > 0:
+                total -= 10
+                ases  -= 1
+            return total
+
+        # -- FUNCIÓN INTERNA: mostrar mano --
+        def mostrarMano(mano, cantidad, propietario):
+            print(f"  {propietario}: ", end="")
+            i = 0
+            while i < cantidad:
+                print(mano[i], end=" ")
+                i += 1
+            print(f"  → {calcularPuntaje(mano, cantidad)} puntos")
+
+        # -- TURNO DEL JUGADOR --
+        jugador_perdio = False
+        jugador_planto = False
+
+        while not jugador_planto and not jugador_perdio:
+            limpiar_pantalla()
+            print("=" * 45)
+            mostrarMano(mano_banca,   cant_banca,   "Banca  ")
+            mostrarMano(mano_jugador, cant_jugador, nombre)
+            print("=" * 45)
+
+            puntaje_jugador = calcularPuntaje(mano_jugador, cant_jugador)
+
+            if puntaje_jugador == 21:
+                print("¡Tenés 21! Turno de la banca.")
+                jugador_planto = True
+            elif puntaje_jugador > 21:
+                print(f"¡Te pasaste de 21! Perdiste.")
+                jugador_perdio = True
+            else:
+                accion = input("¿Querés PEDIR carta o PLANTARTE?: ").upper()
+                while accion != "PEDIR" and accion != "PLANTARTE":
+                    accion = input("Opción inválida. Escribí PEDIR o PLANTARTE: ").upper()
+
+                if accion == "PEDIR":
+                    mano_jugador[cant_jugador] = mazo[carta_actual]
+                    carta_actual  += 1
+                    cant_jugador  += 1
+                else:
+                    jugador_planto = True
+
+        # -- TURNO DE LA BANCA --
+        if not jugador_perdio:
+            while calcularPuntaje(mano_banca, cant_banca) < 17:
+                mano_banca[cant_banca] = mazo[carta_actual]
+                carta_actual += 1
+                cant_banca   += 1
+
+            limpiar_pantalla()
+            puntaje_jugador = calcularPuntaje(mano_jugador, cant_jugador)
+            puntaje_banca   = calcularPuntaje(mano_banca,   cant_banca)
+
+            print("=" * 45)
+            print("RESULTADO FINAL")
+            print("=" * 45)
+            mostrarMano(mano_banca,   cant_banca,   "Banca  ")
+            mostrarMano(mano_jugador, cant_jugador, nombre)
+            print("=" * 45)
+
+            if puntaje_banca > 21:
+                print(f"¡La banca se pasó! Ganaste, {nombre}!")
+                victorias_bj[indice] += 1
+            elif puntaje_jugador > puntaje_banca:
+                print(f"¡Ganaste, {nombre}!")
+                victorias_bj[indice] += 1
+            elif puntaje_jugador < puntaje_banca:
+                print(f"Ganó la banca. ¡Suerte la próxima, {nombre}!")
+            else:
+                print("¡Empate!")
+
+        otra = input("\n¿Querés jugar otra partida? (SI/NO): ").upper()
+        while otra != "SI" and otra != "NO":
+            otra = input("Opción inválida. Escribí SI o NO: ").upper()
+        jugar_otra = otra == "SI"
+
+    input("\nPresione Enter para volver al menú principal")
 """
 nombre, opcion_pi: string
 creditos, apuesta_cant, dado1, dado2, suma: int
 es_par: boolean
 """
 def parImpar():
-    global aciertos_dados
-    global creditos
+    global aciertos_dados_arr, creditos_arr
 
     limpiar_pantalla()
-    nombre = pedirNombre()
 
-    
-    print(f"Bienvenido {nombre}! Tienes {creditos} créditos.")
-    
-    # pedir cantidad
-    apuesta_cant = int(input(f"¿Cuántos créditos deseas apostar? (Máximo {creditos}): "))
-    while apuesta_cant <= 0 or apuesta_cant > creditos:
-        apuesta_cant = int(input(f"Monto inválido. Ingresa entre 1 y {creditos}: "))
-    
-    # pedir par o impar
+    indice = pedirNombre()
+    if indice == -1:
+        input("\nPresione Enter para volver al menú principal")
+        return
+    nombre = nombres_jugadores[indice]
+
+    if creditos_arr[indice] <= 0:
+        print(f"Lo sentimos {nombre}, no tenés créditos para jugar.")
+        input("\nPresione Enter para volver al menú principal")
+        return
+
+    print(f"Bienvenido {nombre}! Tienes {creditos_arr[indice]} créditos.")
+
+    # pedir apuesta
+    apuesta_cant = input(f"¿Cuántos créditos deseas apostar? (Máximo {creditos_arr[indice]}): ")
+    while not apuesta_cant.isdigit():
+        apuesta_cant = input("Entrada inválida, ingrese un número: ")
+    apuesta_cant = int(apuesta_cant)
+
+    while apuesta_cant <= 0 or apuesta_cant > creditos_arr[indice]:
+        apuesta_cant = input(f"Monto inválido. Ingresa entre 1 y {creditos_arr[indice]}: ")
+        while not apuesta_cant.isdigit():
+            apuesta_cant = input("Entrada inválida, ingrese un número: ")
+        apuesta_cant = int(apuesta_cant)
+
+    # pedir par o impar ANTES de tirar los dados
     opcion_pi = input("¿Apuestas a PAR o IMPAR?: ").upper()
     while opcion_pi != "PAR" and opcion_pi != "IMPAR":
         opcion_pi = input("Opción inválida. Escribe PAR o IMPAR: ").upper()
-    
-    # ludopatía
+
+    # tirar dados
     dado1 = random.randint(1, 6)
     dado2 = random.randint(1, 6)
     suma = dado1 + dado2
-    
+
     print(f"\nLos dados cayeron: {dado1} y {dado2}")
     print(f"La suma es: {suma}")
-    
-    # 4. resultado
+
+    # resultado
     if (suma % 2 == 0 and opcion_pi == "PAR") or (suma % 2 != 0 and opcion_pi == "IMPAR"):
-        creditos += apuesta_cant
-        aciertos_dados += 1
-        print(f"¡GANASTE! Ahora tienes {creditos} créditos.") 
+        creditos_arr[indice] += apuesta_cant
+        aciertos_dados_arr[indice] += 1
+        print(f"¡GANASTE! Ahora tienes {creditos_arr[indice]} créditos.")
     else:
-        creditos -= apuesta_cant
-        print(f"PERDISTE. Te quedan {creditos} créditos.") 
-        
-    input("\nPresione Enter para volver al menú principal...") #
+        creditos_arr[indice] -= apuesta_cant
+        print(f"PERDISTE. Te quedan {creditos_arr[indice]} créditos.")
+        if creditos_arr[indice] <= 0:
+            print(f"Te quedaste sin créditos. Ya no podrás jugar a Par o Impar.")
+
+    input("\nPresione Enter para volver al menú principal...")
 
 
 #no utiliza variables locales, accede a las variables globales para lectura
 def reporte():
-    limpiar_pantalla()
-    print("█▀▀ █▀ ▀█▀ ▄▀█ █▀▄ █ █▀ ▀█▀ █ █▀▀ ▄▀█ █▀   █▀▄ █▀▀ █░░   █▀ █ █▀ ▀█▀ █▀▀ █▀▄▀█ ▄▀█")
-    print("██▄ ▄█ ░█░ █▀█ █▄▀ █ ▄█ ░█░ █ █▄▄ █▀█ ▄█   █▄▀ ██▄ █▄▄   ▄█ █ ▄█ ░█░ ██▄ █░▀░█ █▀█")
+    global nombres_jugadores, rachas_mm, jugadas_secreto_arr
+    global victorias_secreto_arr, derrotas_secreto_arr
+    global victorias_bj, creditos_arr, aciertos_dados_arr
+    global cantidad_jugadores
 
-    # menorMayor()
-    print(f"\n\nMejor racha registrada: {racha_maxima_global}")
-    print(f"Lograda por el jugador: {nombre_ganador_menor_mayor}")
+    opc_reporte = ""
+    while opc_reporte != "E":
+        limpiar_pantalla()
+        print("=" * 45)
+        print("           REPORTE DEL SISTEMA")
+        print("=" * 45)
+        print("A- Jugadores ordenados por victorias")
+        print("B- Juegos jugados por un jugador")
+        print("C- Jugadores de Par/Impar por crédito")
+        print("D- Racha de un jugador en Menor/Mayor")
+        print("E- Volver al menú principal")
+        print("=" * 45)
 
-    # numeroSecreto()
-    print("\n--- JUEGO: NÚMERO SECRETO ---")
-    print(f"Partidas totales: {jugadas_secreto}")
-    print(f"Victorias: {victorias_secreto} | Derrotas: {derrotas_secreto}")
+        opc_reporte = input("Ingrese su opción: ").upper()
+        while opc_reporte != "A" and opc_reporte != "B" and opc_reporte != "C" and opc_reporte != "D" and opc_reporte != "E":
+            opc_reporte = input("Opción inválida, reintente: ").upper()
 
-    # parImpar()
-    print("\n--- JUEGO: PAR O IMPAR ---")
-    print(f"Cantidad total de aciertos: {aciertos_dados}")
+        if opc_reporte == "A":
+            limpiar_pantalla()
+            print("=" * 45)
+            print("  JUGADORES ORDENADOS POR VICTORIAS")
+            print("=" * 45)
 
-    # --------
-    print("\n" + "="*45)
-    input("Presione Enter para volver al menú principal...")
+            if cantidad_jugadores == 0:
+                print("No hay jugadores registrados.")
+            else:
+                # arrays temporales para ordenar
+                nombres_ord   = [None] * cantidad_jugadores
+                victorias_ord = [0]    * cantidad_jugadores
 
+                i = 0
+                while i < cantidad_jugadores:
+                    nombres_ord[i]   = nombres_jugadores[i]
+                    victorias_ord[i] = victorias_secreto_arr[i] + victorias_bj[i] + aciertos_dados_arr[i]
+                    i += 1
 
+                # burbuja mayor a menor
+                i = 0
+                while i < cantidad_jugadores - 1:
+                    j = 0
+                    while j < cantidad_jugadores - i - 1:
+                        if victorias_ord[j] < victorias_ord[j + 1]:
+                            # swap victorias
+                            aux               = victorias_ord[j]
+                            victorias_ord[j]  = victorias_ord[j + 1]
+                            victorias_ord[j + 1] = aux
+                            # swap nombres
+                            aux             = nombres_ord[j]
+                            nombres_ord[j]  = nombres_ord[j + 1]
+                            nombres_ord[j + 1] = aux
+                        j += 1
+                    i += 1
 
+                i = 0
+                while i < cantidad_jugadores:
+                    print(f"  {i + 1}. {nombres_ord[i]} → {victorias_ord[i]} victorias")
+                    i += 1
+
+            input("\nPresione Enter para continuar...")
+
+        elif opc_reporte == "B":
+            limpiar_pantalla()
+            print("=" * 45)
+            print("      JUEGOS JUGADOS POR JUGADOR")
+            print("=" * 45)
+
+            nombre_buscar = input("Ingrese el nombre del jugador: ")
+            while nombre_buscar == "":
+                nombre_buscar = input("El nombre no puede estar vacío: ")
+
+            indice = buscarJugador(nombre_buscar)
+
+            if indice == -1:
+                print(f"No se encontró el jugador '{nombre_buscar}'.")
+            else:
+                print(f"\n  Jugador: {nombres_jugadores[indice]}")
+                print("-" * 45)
+
+                if rachas_mm[indice] > 0:
+                    print(f"  Menor/Mayor     → Racha máxima: {rachas_mm[indice]}")
+
+                if jugadas_secreto_arr[indice] > 0:
+                    print(f"  Número Secreto  → Victorias: {victorias_secreto_arr[indice]} / Jugadas: {jugadas_secreto_arr[indice]}")
+
+                if victorias_bj[indice] > 0:
+                    print(f"  Blackjack       → Victorias: {victorias_bj[indice]}")
+
+                if creditos_arr[indice] != 1000 or aciertos_dados_arr[indice] > 0:
+                    print(f"  Par o Impar     → Créditos: {creditos_arr[indice]} | Aciertos: {aciertos_dados_arr[indice]}")
+
+                if rachas_mm[indice] == 0 and jugadas_secreto_arr[indice] == 0 and victorias_bj[indice] == 0 and aciertos_dados_arr[indice] == 0 and creditos_arr[indice] == 1000:
+                    print("  Este jugador aún no ha jugado ningún juego.")
+
+            input("\nPresione Enter para continuar...")
+
+        elif opc_reporte == "C":
+            limpiar_pantalla()
+            print("=" * 45)
+            print("   JUGADORES PAR/IMPAR POR CRÉDITO")
+            print("=" * 45)
+
+            if cantidad_jugadores == 0:
+                print("No hay jugadores registrados.")
+            else:
+                # arrays temporales para ordenar
+                nombres_ord  = [None] * cantidad_jugadores
+                creditos_ord = [0]    * cantidad_jugadores
+
+                i = 0
+                while i < cantidad_jugadores:
+                    nombres_ord[i]  = nombres_jugadores[i]
+                    creditos_ord[i] = creditos_arr[i]
+                    i += 1
+
+                # burbuja menor a mayor
+                i = 0
+                while i < cantidad_jugadores - 1:
+                    j = 0
+                    while j < cantidad_jugadores - i - 1:
+                        if creditos_ord[j] > creditos_ord[j + 1]:
+                            # swap creditos
+                            aux              = creditos_ord[j]
+                            creditos_ord[j]  = creditos_ord[j + 1]
+                            creditos_ord[j + 1] = aux
+                            # swap nombres
+                            aux            = nombres_ord[j]
+                            nombres_ord[j] = nombres_ord[j + 1]
+                            nombres_ord[j + 1] = aux
+                        j += 1
+                    i += 1
+
+                i = 0
+                while i < cantidad_jugadores:
+                    print(f"  {i + 1}. {nombres_ord[i]} → ${creditos_ord[i]} créditos")
+                    i += 1
+
+            input("\nPresione Enter para continuar...")
+
+        elif opc_reporte == "D":
+            limpiar_pantalla()
+            print("=" * 45)
+            print("      RACHA EN MENOR/MAYOR")
+            print("=" * 45)
+
+            nombre_buscar = input("Ingrese el nombre del jugador: ")
+            while nombre_buscar == "":
+                nombre_buscar = input("El nombre no puede estar vacío: ")
+
+            indice = buscarJugador(nombre_buscar)
+
+            if indice == -1:
+                print(f"No se encontró el jugador '{nombre_buscar}'.")
+            else:
+                print(f"\n  {nombres_jugadores[indice]} → Racha máxima: {rachas_mm[indice]}")
+
+            input("\nPresione Enter para continuar...")
 
 
 
@@ -324,6 +618,7 @@ def MENU():
     print("| $$    $$| $$  | $$ /$$  \ $$  | $$  | $$\  $$$| $$  | $$          | $$      ")
     print("|  $$$$$$/| $$  | $$|  $$$$$$/ /$$$$$$| $$ \  $$|  $$$$$$/       /$$| $$$$$$$$")
     print(" \______/ |__/  |__/ \______/ |______/|__/  \__/ \______/       |__/|________/")
+    print("test. no subir al cvg")
 
     print("\n\n" + "="*78)
     print("\n" + "A-                         Juego del menor-mayor")
